@@ -1,3 +1,12 @@
 [submodule "ext/mcux-sdk"]
 	path = ext/mcux-sdk
 	url = https://github.com/NXPmicro/mcux-sdk
+[submodule "ext/mcux-devices-mcx"]
+	path = ext/mcux-devices-mcx
+	url = https://github.com/nxp-mcuxpresso/mcux-devices-mcx.git
+[submodule "ext/mcuxsdk-core"]
+	path = ext/mcuxsdk-core
+	url = https://github.com/nxp-mcuxpresso/mcuxsdk-core.git
+[submodule "ext/mcuxsdk-middleware-usb"]
+	path = ext/mcuxsdk-middleware-usb
+	url = https://github.com/nxp-mcuxpresso/mcuxsdk-middleware-usb.git
