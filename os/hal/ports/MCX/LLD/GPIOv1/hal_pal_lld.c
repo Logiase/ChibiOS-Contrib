@@ -243,8 +243,16 @@ OSAL_IRQ_HANDLER(VectorAC) {
  */
 void _pal_lld_init(void) {
 
-  SYSCON->AHBCLKCTRLSET[0] = MCX_AHBCLKCTRL0_PORT_MASK |
-                             MCX_AHBCLKCTRL0_GPIO_MASK;
+  CLOCK_EnableClock(kCLOCK_Port0);
+  CLOCK_EnableClock(kCLOCK_Port1);
+  CLOCK_EnableClock(kCLOCK_Port2);
+  CLOCK_EnableClock(kCLOCK_Port3);
+  CLOCK_EnableClock(kCLOCK_Port4);
+  CLOCK_EnableClock(kCLOCK_Gpio0);
+  CLOCK_EnableClock(kCLOCK_Gpio1);
+  CLOCK_EnableClock(kCLOCK_Gpio2);
+  CLOCK_EnableClock(kCLOCK_Gpio3);
+  CLOCK_EnableClock(kCLOCK_Gpio4);
 
 #if (PAL_USE_WAIT == TRUE) || (PAL_USE_CALLBACKS == TRUE) || defined(__DOXYGEN__)
   for (uint32_t i = 0U; i < PAL_MCX_EVENT_COUNT; i++) {

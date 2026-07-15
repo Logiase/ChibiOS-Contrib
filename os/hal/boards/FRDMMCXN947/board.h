@@ -35,7 +35,7 @@
 #define LINE_LED_BLUE          PAL_LINE(BOARD_LED_BLUE_PORT, BOARD_LED_BLUE_PAD)
 
 /*
- * User buttons.
+ * Board buttons.
  */
 #define BOARD_SW2_PORT         GPIO0
 #define BOARD_SW2_PAD          23U
@@ -46,6 +46,24 @@
 #define BOARD_SW3_PAD          6U
 #define BOARD_SW3_MASK         (1UL << BOARD_SW3_PAD)
 #define LINE_BUTTON_SW3        PAL_LINE(BOARD_SW3_PORT, BOARD_SW3_PAD)
+
+/*
+ * Serial Port.
+ */
+#define BOARD_LPUART4_RX_PORT      GPIO1
+#define BOARD_LPUART4_RX_PAD       8U
+#define BOARD_LPUART4_RX_MASK      (1UL << BOARD_LPUART4_RX_PAD)
+#define LINE_LPUART4_RX            PAL_LINE(BOARD_LPUART4_RX_PORT, BOARD_LPUART4_RX_PAD)
+
+#define BOARD_LPUART4_TX_PORT      GPIO1
+#define BOARD_LPUART4_TX_PAD       9U
+#define BOARD_LPUART4_TX_MASK      (1UL << BOARD_LPUART4_TX_PAD)
+#define LINE_LPUART4_TX            PAL_LINE(BOARD_LPUART4_TX_PORT, BOARD_LPUART4_TX_PAD)
+
+#define BOARD_LPUART4_MODE         (PAL_MODE_ALTERNATE(2U) | \
+                                    PORT_PCR_IBE(1U) |      \
+                                    PORT_PCR_PE(1U) |       \
+                                    PORT_PCR_PS(1U))
 
 #if !defined(_FROM_ASM_)
 

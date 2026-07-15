@@ -65,7 +65,12 @@ OSAL_IRQ_HANDLER(SysTick_Handler) {
 void st_lld_init(void) {
 
 #if OSAL_ST_MODE == OSAL_ST_MODE_PERIODIC
-  SysTick->LOAD = SystemCoreClock - 1;
+  osalDbgAssert((SystemCoreClock % OSAL_ST_FREQUENCY) == 0U, 
+                "invalid ST frequency");
+  osalDbgAssert(((SystemCoreClock / OSAL_ST_FREQUENCY) - 1U) <= 0x00FFFFFFU,
+                "SysTick reload overflow");
+
+  SysTick->LOAD = SystemCoreClock / OSAL_ST_FREQUENCY - 1;
   SysTick->VAL = 0U;
   SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |
                   SysTick_CTRL_ENABLE_Msk |
