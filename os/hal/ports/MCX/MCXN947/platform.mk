@@ -29,6 +29,7 @@ DADEFS += -include mcx_device.h
 include $(CHIBIOS_CONTRIB)/os/hal/ports/MCX/LLD/SYSTICKv1/driver.mk
 include $(CHIBIOS_CONTRIB)/os/hal/ports/MCX/LLD/GPIOv1/driver.mk
 include $(CHIBIOS_CONTRIB)/os/hal/ports/MCX/LLD/LPUARTv1/driver.mk
+include $(CHIBIOS_CONTRIB)/os/hal/ports/MCX/LLD/USBHSv1/driver.mk
 
 ifneq ($(MCX_NEED_LPFLEXCOMM),)
   PLATFORMSRC_CONTRIB += $(CHIBIOS_CONTRIB)/ext/mcuxsdk-core/drivers/lpflexcomm/fsl_lpflexcomm.c
