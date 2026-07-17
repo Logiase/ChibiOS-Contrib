@@ -16,7 +16,7 @@
 
 /**
  * @file    hal_usb_lld.h
- * @brief   PLATFORM USB subsystem low level driver header.
+ * @brief   MCX USBHS subsystem low level driver header.
  *
  * @addtogroup USB
  * @{
@@ -27,6 +27,13 @@
 
 #if (HAL_USE_USB == TRUE) || defined(__DOXYGEN__)
 
+#include "fsl_device_registers.h"
+#include "usb_device_config.h"
+#include "usb.h"
+#include "usb_device.h"
+#include "usb_device_dci.h"
+#include "usb_device_ehci.h"
+
 /*===========================================================================*/
 /* Driver constants.                                                         */
 /*===========================================================================*/
@@ -34,7 +41,11 @@
 /**
  * @brief   Maximum endpoint address.
  */
-#define USB_MAX_ENDPOINTS                   4
+#define USB_MAX_ENDPOINTS                   7
+
+#if USB_DEVICE_CONFIG_ENDPOINTS != (USB_MAX_ENDPOINTS + 1)
+#error "Mismatch: USB_DEVICE_CONFIG_ENDPOINTS != USB_MAX_ENDPOINTS + 1"
+#endif
 
 /**
  * @brief   Status stage handling method.
@@ -42,9 +53,9 @@
 #define USB_EP0_STATUS_STAGE                USB_EP0_STATUS_STAGE_SW
 
 /**
- * @brief   The address can be changed immediately upon packet reception.
+ * @brief   The address is changed before the status stage.
  */
-#define USB_SET_ADDRESS_MODE                USB_LATE_SET_ADDRESS
+#define USB_SET_ADDRESS_MODE                USB_EARLY_SET_ADDRESS
 
 /**
  * @brief   Method for set address acknowledge.
@@ -56,7 +67,7 @@
 /*===========================================================================*/
 
 /**
- * @name    PLATFORM configuration options
+ * @name    MCX configuration options
  * @{
  */
 /**
@@ -64,14 +75,48 @@
  * @details If set to @p TRUE the support for USB1 is included.
  * @note    The default is @p FALSE.
  */
-#if !defined(PLATFORM_USB_USE_USB1) || defined(__DOXYGEN__)
-#define PLATFORM_USB_USE_USB1                  FALSE
+#if !defined(MCX_USB_USE_USB1) || defined(__DOXYGEN__)
+#define MCX_USB_USE_USB1                    FALSE
+#endif
+
+/**
+ * @brief   USB1 interrupt priority level setting.
+ */
+#if !defined(MCX_USB_USB1_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#define MCX_USB_USB1_IRQ_PRIORITY           3
+#endif
+
+/**
+ * @brief   USBHS PHY calibration defaults.
+ */
+#if !defined(MCX_USB_PHY_D_CAL) || defined(__DOXYGEN__)
+#define MCX_USB_PHY_D_CAL                   0x04U
+#endif
+
+#if !defined(MCX_USB_PHY_TXCAL45DP) || defined(__DOXYGEN__)
+#define MCX_USB_PHY_TXCAL45DP               0x07U
+#endif
+
+#if !defined(MCX_USB_PHY_TXCAL45DM) || defined(__DOXYGEN__)
+#define MCX_USB_PHY_TXCAL45DM               0x07U
 #endif
 /** @} */
 
 /*===========================================================================*/
 /* Derived constants and error checks.                                       */
 /*===========================================================================*/
+
+#if (MCX_USB_USE_USB1 == TRUE) && !OSAL_IRQ_IS_VALID_PRIORITY(MCX_USB_USB1_IRQ_PRIORITY)
+#error "Invalid IRQ priority assigned to MCX_USB_USB1_IRQ_PRIORITY"
+#endif
+
+#if (MCX_USB_USE_USB1 == TRUE) && !defined(USBHS_IRQS)
+#error "USBHS_IRQS not defined"
+#endif
+
+#if (MCX_USB_USE_USB1 == FALSE)
+#error "USB driver activated but no USB peripheral assigned"
+#endif
 
 /*===========================================================================*/
 /* Driver data structures and types.                                         */
@@ -138,47 +183,30 @@ typedef struct {
   uint32_t                      ep_mode;
   /**
    * @brief   Setup packet notification callback.
-   * @details This callback is invoked when a setup packet has been
-   *          received.
-   * @post    The application must immediately call @p usbReadPacket() in
-   *          order to access the received packet.
-   * @note    This field is only valid for @p USB_EP_MODE_TYPE_CTRL
-   *          endpoints, it should be set to @p NULL for other endpoint
-   *          types.
    */
   usbepcallback_t               setup_cb;
   /**
    * @brief   IN endpoint notification callback.
-   * @details This field must be set to @p NULL if the IN endpoint is not
-   *          used.
    */
   usbepcallback_t               in_cb;
   /**
    * @brief   OUT endpoint notification callback.
-   * @details This field must be set to @p NULL if the OUT endpoint is not
-   *          used.
    */
   usbepcallback_t               out_cb;
   /**
    * @brief   IN endpoint maximum packet size.
-   * @details This field must be set to zero if the IN endpoint is not
-   *          used.
    */
   uint16_t                      in_maxsize;
   /**
    * @brief   OUT endpoint maximum packet size.
-   * @details This field must be set to zero if the OUT endpoint is not
-   *          used.
    */
   uint16_t                      out_maxsize;
   /**
    * @brief   @p USBEndpointState associated to the IN endpoint.
-   * @details This structure maintains the state of the IN endpoint.
    */
   USBInEndpointState            *in_state;
   /**
    * @brief   @p USBEndpointState associated to the OUT endpoint.
-   * @details This structure maintains the state of the OUT endpoint.
    */
   USBOutEndpointState           *out_state;
   /* End of the mandatory fields.*/
@@ -190,18 +218,14 @@ typedef struct {
 typedef struct {
   /**
    * @brief   USB events callback.
-   * @details This callback is invoked when an USB driver event is registered.
    */
   usbeventcb_t                  event_cb;
   /**
    * @brief   Device GET_DESCRIPTOR request callback.
-   * @note    This callback is mandatory and cannot be set to @p NULL.
    */
   usbgetdescriptor_t            get_descriptor_cb;
   /**
    * @brief   Requests hook callback.
-   * @details This hook allows to be notified of standard requests or to
-   *          handle non standard requests.
    */
   usbreqhandler_t               requests_hook_cb;
   /**
@@ -238,15 +262,11 @@ struct USBDriver {
   /**
    * @brief   Fields available to user, it can be used to associate an
    *          application-defined handler to an IN endpoint.
-   * @note    The base index is one, the endpoint zero does not have a
-   *          reserved element in this array.
    */
   void                          *in_params[USB_MAX_ENDPOINTS];
   /**
    * @brief   Fields available to user, it can be used to associate an
    *          application-defined handler to an OUT endpoint.
-   * @note    The base index is one, the endpoint zero does not have a
-   *          reserved element in this array.
    */
   void                          *out_params[USB_MAX_ENDPOINTS];
   /**
@@ -289,6 +309,22 @@ struct USBDriver {
   USB_DRIVER_EXT_FIELDS
 #endif
   /* End of the mandatory fields.*/
+  /**
+   * @brief   Bitmap of initialized IN endpoints.
+   */
+  uint16_t                      in_enabled;
+  /**
+   * @brief   Bitmap of initialized OUT endpoints.
+   */
+  uint16_t                      out_enabled;
+  /**
+   * @brief   Bitmap of IN endpoints waiting for a submit retry.
+   */
+  uint16_t                      in_pending;
+  /**
+   * @brief   Bitmap of OUT endpoints waiting for a submit retry.
+   */
+  uint16_t                      out_pending;
 };
 
 /*===========================================================================*/
@@ -296,59 +332,41 @@ struct USBDriver {
 /*===========================================================================*/
 
 /**
- * @brief   Returns the current frame number.
- *
- * @param[in] usbp      pointer to the @p USBDriver object
- * @return              The current frame number.
- *
- * @notapi
- */
-#define usb_lld_get_frame_number(usbp) 0
-
-/**
  * @brief   Returns the exact size of a receive transaction.
- * @details The received size can be different from the size specified in
- *          @p usbStartReceiveI() because the last packet could have a size
- *          different from the expected one.
- * @pre     The OUT endpoint must have been configured in transaction mode
- *          in order to use this function.
- *
- * @param[in] usbp      pointer to the @p USBDriver object
- * @param[in] ep        endpoint number
- * @return              Received data size.
- *
- * @notapi
  */
 #define usb_lld_get_transaction_size(usbp, ep)                              \
   ((usbp)->epc[ep]->out_state->rxcnt)
 
 /**
  * @brief   Connects the USB device.
- *
- * @api
  */
-#define usb_lld_connect_bus(usbp)
+#define usb_lld_connect_bus(usbp) do {                                      \
+  (void)(usbp);                                                             \
+  (void)USB_DeviceRun(mcx_usb_device_handle);                               \
+} while (false)
 
 /**
  * @brief   Disconnect the USB device.
- *
- * @api
  */
-#define usb_lld_disconnect_bus(usbp)
+#define usb_lld_disconnect_bus(usbp) do {                                   \
+  (void)(usbp);                                                             \
+  (void)USB_DeviceStop(mcx_usb_device_handle);                              \
+} while (false)
 
 /**
  * @brief   Start of host wake-up procedure.
- *
- * @notapi
  */
-#define usb_lld_wakeup_host(usbp)
+#define usb_lld_wakeup_host(usbp) do {                                      \
+  (void)(usbp);                                                             \
+} while (false)
 
 /*===========================================================================*/
 /* External declarations.                                                    */
 /*===========================================================================*/
 
-#if (PLATFORM_USB_USE_USB1 == TRUE) && !defined(__DOXYGEN__)
+#if (MCX_USB_USE_USB1 == TRUE) && !defined(__DOXYGEN__)
 extern USBDriver USBD1;
+extern usb_device_handle mcx_usb_device_handle;
 #endif
 
 #ifdef __cplusplus
@@ -372,6 +390,7 @@ extern "C" {
   void usb_lld_stall_in(USBDriver *usbp, usbep_t ep);
   void usb_lld_clear_out(USBDriver *usbp, usbep_t ep);
   void usb_lld_clear_in(USBDriver *usbp, usbep_t ep);
+  uint32_t usb_lld_get_frame_number(USBDriver *usbp);
 #ifdef __cplusplus
 }
 #endif

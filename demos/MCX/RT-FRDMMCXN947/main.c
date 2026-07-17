@@ -1,5 +1,6 @@
 #include "ch.h"
 #include "hal.h"
+#include "usbcfg.h"
 
 #if defined (__TEST_RT)
 #include "rt_test_root.h"
@@ -10,6 +11,8 @@
 
 /* Testing in progress.*/
 static bool testing = false;
+
+semaphore_t scls;
 
 /*
  * Green LED blinker thread, times are in milliseconds.
@@ -25,6 +28,28 @@ static THD_FUNCTION(Thread1, arg) {
   }
 }
 
+/*
+ * USB CDC ACM echo thread.
+ */
+static THD_WORKING_AREA(waUsbEchoThread, 256);
+static THD_FUNCTION(UsbEchoThread, arg) {
+  uint8_t buffer[64];
+
+  (void)arg;
+  chRegSetThreadName("usb_echo");
+
+  while (true) {
+    if (SDU1.config->usbp->state != USB_ACTIVE) {
+      chThdSleepMilliseconds(50);
+      continue;
+    }
+
+    size_t n = chnReadTimeout(&SDU1, buffer, sizeof buffer, TIME_MS2I(100));
+    if (n > 0U) {
+      (void)chnWriteTimeout(&SDU1, buffer, n, TIME_MS2I(100));
+    }
+  }
+}
 /*
  * Application entry point.
  */
@@ -44,11 +69,24 @@ int main(void) {
    * Activates the Serial or SIO driver using the default configuration.
    */
   sdStart(&SD4, NULL);
+  /*
+   * Activates the USB CDC ACM device on the board USBHS connector.
+   */
+  chSemObjectInit(&scls, 0);
+  sduObjectInit(&SDU1);
+  sduStart(&SDU1, &serusbcfg);
+
+  usbDisconnectBus(serusbcfg.usbp);
+  chThdSleepMilliseconds(1500);
+  usbStart(serusbcfg.usbp, &usbcfg);
+  usbConnectBus(serusbcfg.usbp);
 
   /*
    * Creates the blinker thread.
    */
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO + 10, Thread1, NULL);
+  chThdCreateStatic(waUsbEchoThread, sizeof(waUsbEchoThread), NORMALPRIO + 1,
+                    UsbEchoThread, NULL);
 
   /*
    * Normal main() thread activity, in this demo it does nothing except

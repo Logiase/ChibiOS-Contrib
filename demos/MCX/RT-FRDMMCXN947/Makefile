@@ -121,7 +121,8 @@ LDSCRIPT = $(STARTUPLD_CONTRIB)/MCXN947.ld
 # settings.
 CSRC = $(ALLCSRC) \
        $(TESTSRC) \
-       main.c
+       main.c \
+       usbcfg.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # settings.

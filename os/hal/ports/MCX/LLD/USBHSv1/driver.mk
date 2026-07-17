@@ -16,7 +16,6 @@ endif
 PLATFORMINC_CONTRIB += $(CHIBIOS_CONTRIB)/os/hal/ports/MCX/LLD/USBHSv1 \
                        $(CHIBIOS_CONTRIB)/os/hal/ports/MCX/LLD/USBHSv1/components/osa \
                        $(CHIBIOS_CONTRIB)/os/hal/ports/MCX/LLD/USBHSv1/components/lists \
-                       $(CHIBIOS_CONTRIB)/ext/mcuxsdk-middleware-usb/config/device/ehci \
                        $(CHIBIOS_CONTRIB)/ext/mcuxsdk-middleware-usb/include \
                        $(CHIBIOS_CONTRIB)/ext/mcuxsdk-middleware-usb/device \
                        $(CHIBIOS_CONTRIB)/ext/mcuxsdk-middleware-usb/phy
